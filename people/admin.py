@@ -64,14 +64,14 @@ class PersonAdmin(TranslatableAdmin):
     """Admin for the ``Person`` model."""
     inlines = [LinkInline, ]
     readonly_fields = ['user']
-    #list_display = [
-        #'username', # django.auth.User
-        #'roman_first_name', 'roman_last_name', 'non_roman_first_name_link',
-        #'non_roman_last_name', 'chosen_name', 'gender', 'title', 'role',
-    #    'phone', 'email', 'ordering', 'all_translations', ]
-    #search_fields = [
-            #'user__username',
-    #        'roman_first_name','roman_last_name', 'email', ]
+    list_display = [
+        'username', # django.auth.User
+        'roman_first_name', 'roman_last_name', 'non_roman_first_name_link',
+        'non_roman_last_name', 'chosen_name', 'gender', 'title', 'role',
+        'phone', 'email', 'ordering', 'all_translations', ]
+    search_fields = [
+        'user__username',
+        'roman_first_name','roman_last_name', 'email', ]
     list_select_related = [] # ['user',] not implemented by hvad
     #list_filter = [ 'user__is_staff' ]
 
