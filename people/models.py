@@ -1,11 +1,16 @@
 """Models for the ``people`` app."""
 from django.db import models
+
+from django.dispatch import receiver
+from django.db.models.signals import post_save
+
+#from django.conf import settings
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 
 from cms.models.pluginmodel import CMSPlugin
 from filer.fields.file import FilerFileField
-from hvad.models import TranslatedFields, TranslatableModel
+from hvad.models import TranslatedFields, TranslatableModel, TranslationManager
 from localized_names.templatetags.localized_names_tags import get_name
 
 from . import settings
@@ -28,6 +33,12 @@ TITLE_CHOICES = [
 ]
 
 
+#class PersonManager(TranslationManager):
+#    pass
+
+class LinkTypeManager(TranslationManager):
+    pass
+
 @python_2_unicode_compatible
 class LinkType(TranslatableModel):
     """
@@ -42,16 +53,6 @@ class LinkType(TranslatableModel):
       special order.
 
     """
-    slug = models.SlugField(
-        max_length=256,
-        verbose_name=_('Slug'),
-        help_text=_(
-            'Use this field to define a simple identifier that can be used'
-            ' to style the different link types (i.e. assign social media'
-            ' icons to them)'),
-        blank=True,
-    )
-
     ordering = models.PositiveIntegerField(
         verbose_name=_('Ordering'),
         null=True, blank=True,
@@ -61,15 +62,26 @@ class LinkType(TranslatableModel):
         name=models.CharField(
             max_length=256,
             verbose_name=_('Name'),
+        ),
+        slug = models.SlugField(
+            max_length=256,
+            verbose_name=_('Slug'),
+            help_text=_(
+                'Use this field to define a simple identifier that can be used'
+                ' to style the different link types (i.e. assign social media'
+                ' icons to them)'),
+            blank=True,
         )
     )
+
+    objects = LinkTypeManager()
 
     class Meta:
         ordering = ['ordering', ]
 
     def __str__(self):
-        return self.safe_translation_getter('name', self.slug)
-
+        #return self.safe_translation_getter('name', str(self.pk))
+        return self.safe_translation_getter('name', str(self.pk))
 
 @python_2_unicode_compatible
 class Nationality(TranslatableModel):
@@ -144,48 +156,55 @@ class Person(TranslatableModel):
     :nationality: The nationality of a person.
 
     """
+    user = models.OneToOneField(
+    #user = models.ForeignKey( # change also user receiver event.
+        settings.AUTH_USER_MODEL, null=True, unique=True,
+        related_name="profile", # "person" by default
+        verbose_name=_("user")
+    )
+
     roman_first_name = models.CharField(
         max_length=256,
-        verbose_name=_('Roman first name'),
-        blank=True
+        verbose_name=_('First name'),
+        null=True, blank=True
     )
 
     roman_last_name = models.CharField(
         max_length=256,
-        verbose_name=_('Roman last name'),
-        blank=True,
+        verbose_name=_('Last name'),
+        null=True, blank=True,
     )
 
     non_roman_first_name = models.CharField(
         max_length=256,
         verbose_name=_('Non roman first name'),
-        blank=True
+        null=True, blank=True
     )
 
     non_roman_last_name = models.CharField(
         max_length=256,
         verbose_name=_('Non roman last name'),
-        blank=True,
+        null=True, blank=True,
     )
 
     gender = models.CharField(
         max_length=16,
         choices=GENDER_CHOICES,
         verbose_name=_('Gender'),
-        blank=True,
+        null=True, blank=True,
     )
 
     title = models.CharField(
         max_length=16,
         choices=TITLE_CHOICES,
         verbose_name=_('Title'),
-        blank=True,
+        null=True, blank=True,
     )
 
     chosen_name = models.CharField(
         max_length=256,
         verbose_name=_('Chosen name'),
-        blank=True,
+        null=True, blank=True,
     )
 
     role = models.ForeignKey(
@@ -202,12 +221,12 @@ class Person(TranslatableModel):
     phone = models.CharField(
         max_length=32,
         verbose_name=_('Phone'),
-        blank=True,
+        null=True, blank=True,
     )
 
     email = models.EmailField(
         verbose_name=_('Email'),
-        blank=True,
+        null=True, blank=True,
     )
 
     ordering = models.PositiveIntegerField(
@@ -225,14 +244,20 @@ class Person(TranslatableModel):
         short_bio=models.TextField(
             max_length=512,
             verbose_name=_('Short bio'),
-            blank=True,
+            null=True, blank=True,
         ),
         bio=models.TextField(
             max_length=4000,
             verbose_name=_('Biography'),
-            blank=True,
+            null=True, blank=True,
         ),
     )
+
+    #objects = PersonManager()
+
+    @property
+    def username(self):
+        return self.user.username
 
     class Meta:
         ordering = ['ordering', ]
@@ -240,6 +265,9 @@ class Person(TranslatableModel):
 
     def __str__(self):
         return get_name(self)
+
+    def __unicode__(self):
+        return self.roman_first_name + ' ' + self.roman_last_name
 
     def get_gender(self):
         """Returns either 'Mr.' or 'Ms.' depending on the gender."""
@@ -273,6 +301,30 @@ class Person(TranslatableModel):
         """Returns the nickname of a person in roman letters."""
         return self.chosen_name
 
+# Create Person instance for new User
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_profile_for_new_user(sender, created, instance, **kwargs):
+    if created:
+        profile = Person(user=instance)
+        profile.email = instance.email
+        profile.roman_first_name = instance.first_name
+        profile.roman_last_name = instance.last_name
+        profile.save()
+
+# Update User
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def save_user_with_profile(sender, created, instance, **kwargs):
+    # many profiles to one user
+    #profile = instance.profile.filter(user=instance)[0]
+    #profile.email = instance.email
+    #profile.roman_first_name = instance.first_name
+    #profile.roman_last_name = instance.last_name
+    #profile.save()
+    # onetoone profile_user
+    instance.profile.email = instance.email
+    instance.profile.roman_first_name = instance.first_name
+    instance.profile.roman_last_name = instance.last_name
+    instance.profile.save()
 
 class PersonPluginModel(CMSPlugin):
     """Model for the ``PersonPlugin`` cms plugin."""
