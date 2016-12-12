@@ -60,15 +60,36 @@ class CustomUserAdmin(UserAdmin):
             return list()
         return super(CustomUserAdmin, self).get_inline_instances(request, obj)
 
-class PersonAdmin(TranslatableAdmin):
+class BiographyAdmin(TranslatableAdmin):
+    """Admin for the ``Link`` model."""
+    list_display = ['__str__', 'all_translations',]
+
+class BiographyInline(admin.StackedInline):
+    """Inline admin for ``Biography`` objects."""
+    model = models.Biography
+
+class ShortBiographyAdmin(TranslatableAdmin):
+    """Admin for the ``Link`` model."""
+    list_display = ['__str__', 'all_translations',]
+
+class ShortBiographyInline(admin.StackedInline):
+    """Inline admin for ``ShortBiography`` objects."""
+    model = models.ShortBiography
+
+
+class PersonAdmin(admin.ModelAdmin):
     """Admin for the ``Person`` model."""
-    inlines = [LinkInline, ]
-    readonly_fields = ['user']
+    inlines = [LinkInline,
+            BiographyInline,
+            ShortBiographyInline
+            ]
+    #readonly_fields = ['user']
     list_display = [
         'username', # django.auth.User
         'roman_first_name', 'roman_last_name', 'non_roman_first_name_link',
         'non_roman_last_name', 'chosen_name', 'gender', 'title', 'role',
-        'phone', 'email', 'ordering', 'all_translations', ]
+        'phone', 'email', 'ordering', #'all_translations',
+        ]
     search_fields = [
         'user__username',
         'roman_first_name','roman_last_name', 'email', ]
@@ -95,6 +116,8 @@ class RoleAdmin(TranslatableAdmin):
 admin.site.register(models.Nationality, NationalityAdmin)
 admin.site.register(models.Link, LinkAdmin)
 admin.site.register(models.LinkType, LinkTypeAdmin)
+admin.site.register(models.Biography, BiographyAdmin)
+admin.site.register(models.ShortBiography, ShortBiographyAdmin)
 admin.site.register(models.Person, PersonAdmin)
 admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)

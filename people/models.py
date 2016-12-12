@@ -132,9 +132,9 @@ class Role(TranslatableModel):
         return self.safe_translation_getter(
             'name', 'Role No. {0}'.format(self.id))
 
-
 @python_2_unicode_compatible
-class Person(TranslatableModel):
+class Person(models.Model):
+#class Person(TranslatableModel):
     """
     A model that holds information about a person.
 
@@ -158,7 +158,7 @@ class Person(TranslatableModel):
     """
     user = models.OneToOneField(
     #user = models.ForeignKey( # change also user receiver event.
-        settings.AUTH_USER_MODEL, null=True, unique=True,
+        settings.AUTH_USER_MODEL, null=True, #unique=True,
         related_name="profile", # "person" by default
         verbose_name=_("user")
     )
@@ -240,19 +240,30 @@ class Person(TranslatableModel):
         blank=True, null=True,
     )
 
-    translations = TranslatedFields(
-        short_bio=models.TextField(
-            max_length=512,
-            verbose_name=_('Short bio'),
-            null=True, blank=True,
-        ),
-        bio=models.TextField(
-            max_length=4000,
-            verbose_name=_('Biography'),
-            null=True, blank=True,
-        ),
-    )
+    # https://github.com/KristianOellegaard/django-hvad/issues/272
+    # Well, TranslationAdmin only works on translatable models, so it won't work with User.
+    #That means you cannot inline a translatable model in a non-translatable admin form, unfortunately that's not supported. The issue is it would be inherently ambiguous which translations are to be used, since the main object does not have a language.
+    #
+    #I would suggest one of the following approaches:
+    #
+    # - Use your UserProfile model instead as main editing point. This might be troublesome though as Django's admin does not support nested inlines.
+    # - Implement a custom admin subclass that knows about loading the correct translations based on your project's rules.
+    #
+    # This calss uses the first option, making Person the main editting point: which is referenced translatable model Biography, that is, Bio can be inlined edited in Person.
 
+    #short_bio = models.OneToOneField (
+    #    ShortBiography,
+    #    blank=True, null=True,
+    #    related_name='person',
+    #    verbose_name=_('Short Bio'),
+    #)
+
+    #bio = models.OneToOneField (
+    #    Biography,
+    #    blank=True, null=True,
+    #    related_name='person',
+    #    verbose_name=_('Bio'),
+    #)
     #objects = PersonManager()
 
     @property
@@ -314,17 +325,73 @@ def create_profile_for_new_user(sender, created, instance, **kwargs):
 # Update User
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def save_user_with_profile(sender, created, instance, **kwargs):
-    # many profiles to one user
+    ### many profiles to one user
     #profile = instance.profile.filter(user=instance)[0]
     #profile.email = instance.email
     #profile.roman_first_name = instance.first_name
     #profile.roman_last_name = instance.last_name
     #profile.save()
-    # onetoone profile_user
+    ## onetoone profile_user
     instance.profile.email = instance.email
     instance.profile.roman_first_name = instance.first_name
     instance.profile.roman_last_name = instance.last_name
     instance.profile.save()
+
+@python_2_unicode_compatible
+class AbstractBiography(TranslatableModel):
+
+    translations = TranslatedFields(
+            )
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        pass
+
+@python_2_unicode_compatible
+class ShortBiography(AbstractBiography):
+    translations = TranslatedFields(
+        short_biography=models.TextField(
+            max_length=255,
+            verbose_name=_('Short bio'),
+            blank=True,
+        ),
+    )
+    person = models.OneToOneField(
+        Person,
+        #blank=True, #null=True,
+        related_name='short_biography_person',
+        verbose_name=_('User Profile'),
+        )
+
+    class Meta:
+        pass
+
+    def __str__(self):
+        return "this is it" # self.safe_translation_getter(self.short_biography)
+
+@python_2_unicode_compatible
+class Biography(AbstractBiography):
+    translations = TranslatedFields(
+        long_biography=models.TextField(
+            max_length=512,
+            verbose_name=_('Biography'),
+            blank=True,
+        ),
+    )
+    person = models.OneToOneField(
+        Person,
+        #blank=True, #null=True,
+        related_name='long_biography_person',
+        verbose_name=_('User Profile'),
+        )
+
+    class Meta:
+        pass
+
+    def __str__(self):
+        return "this is it" #self.safe_translation_getter(self.long_biography)
+
 
 class PersonPluginModel(CMSPlugin):
     """Model for the ``PersonPlugin`` cms plugin."""
