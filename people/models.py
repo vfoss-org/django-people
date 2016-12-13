@@ -132,6 +132,36 @@ class Role(TranslatableModel):
         return self.safe_translation_getter(
             'name', 'Role No. {0}'.format(self.id))
 
+
+@python_2_unicode_compatible
+class Biography(TranslatableModel):
+    name=models.CharField(
+            max_length=256,
+            default='default',
+            verbose_name=_('Name'),
+        )
+
+    translations = TranslatedFields(
+        long_biography=models.TextField(
+            max_length=512,
+            verbose_name=_('Short Biography'),
+            blank=True,
+        ),
+        short_biography=models.TextField(
+            max_length=2000,
+            verbose_name=_('Biography'),
+            blank=True,
+        ),
+    )
+
+    class Meta:
+        pass
+
+    def __str__(self):
+        #return "this is it" #self.safe_translation_getter(self.long_biography)
+        return _(self.name) #self.safe_translation_getter(self.long_biography)
+
+
 @python_2_unicode_compatible
 class Person(models.Model):
 #class Person(TranslatableModel):
@@ -258,12 +288,13 @@ class Person(models.Model):
     #    verbose_name=_('Short Bio'),
     #)
 
-    #bio = models.OneToOneField (
-    #    Biography,
-    #    blank=True, null=True,
-    #    related_name='person',
-    #    verbose_name=_('Bio'),
-    #)
+    biography = models.OneToOneField (
+        Biography,
+        blank=True, null=True,
+        related_name='person_biography',
+        verbose_name=_('Biography'),
+    )
+
     #objects = PersonManager()
 
     @property
@@ -275,7 +306,8 @@ class Person(models.Model):
         verbose_name_plural = _('People')
 
     def __str__(self):
-        return get_name(self)
+        return self.roman_first_name + ' ' + self.roman_last_name
+        #return get_name(self)
 
     def __unicode__(self):
         return self.roman_first_name + ' ' + self.roman_last_name
@@ -337,60 +369,38 @@ def save_user_with_profile(sender, created, instance, **kwargs):
     instance.profile.roman_last_name = instance.last_name
     instance.profile.save()
 
-@python_2_unicode_compatible
-class AbstractBiography(TranslatableModel):
-
-    translations = TranslatedFields(
-            )
-    class Meta:
-        abstract = True
-
-    def __str__(self):
-        pass
-
-@python_2_unicode_compatible
-class ShortBiography(AbstractBiography):
-    translations = TranslatedFields(
-        short_biography=models.TextField(
-            max_length=255,
-            verbose_name=_('Short bio'),
-            blank=True,
-        ),
-    )
-    person = models.OneToOneField(
-        Person,
-        #blank=True, #null=True,
-        related_name='short_biography_person',
-        verbose_name=_('User Profile'),
-        )
-
-    class Meta:
-        pass
-
-    def __str__(self):
-        return "this is it" # self.safe_translation_getter(self.short_biography)
-
-@python_2_unicode_compatible
-class Biography(AbstractBiography):
-    translations = TranslatedFields(
-        long_biography=models.TextField(
-            max_length=512,
-            verbose_name=_('Biography'),
-            blank=True,
-        ),
-    )
-    person = models.OneToOneField(
-        Person,
-        #blank=True, #null=True,
-        related_name='long_biography_person',
-        verbose_name=_('User Profile'),
-        )
-
-    class Meta:
-        pass
-
-    def __str__(self):
-        return "this is it" #self.safe_translation_getter(self.long_biography)
+#@python_2_unicode_compatible
+#class AbstractBiography(TranslatableModel):
+#
+#    translations = TranslatedFields(
+#            )
+#    class Meta:
+#        abstract = True
+#
+#    def __str__(self):
+#        pass
+#
+#@python_2_unicode_compatible
+#class ShortBiography(AbstractBiography):
+#    translations = TranslatedFields(
+#        short_biography=models.TextField(
+#            max_length=255,
+#            verbose_name=_('Short bio'),
+#            blank=True,
+#        ),
+#    )
+#    person = models.OneToOneField(
+#        Person,
+#        #blank=True, #null=True,
+#        related_name='short_biography_person',
+#        verbose_name=_('User Profile'),
+#        )
+#
+#    class Meta:
+#        pass
+#
+#    def __str__(self):
+#        return "this is it" # self.safe_translation_getter(self.short_biography)
 
 
 class PersonPluginModel(CMSPlugin):

@@ -64,24 +64,25 @@ class BiographyAdmin(TranslatableAdmin):
     """Admin for the ``Link`` model."""
     list_display = ['__str__', 'all_translations',]
 
+# Inlined model must hve foreign key to injected model
+# With inline, the fields are embedded in injected model form.
 class BiographyInline(admin.StackedInline):
     """Inline admin for ``Biography`` objects."""
+    inlines = [ProfileInline,]
     model = models.Biography
 
-class ShortBiographyAdmin(TranslatableAdmin):
-    """Admin for the ``Link`` model."""
-    list_display = ['__str__', 'all_translations',]
-
-class ShortBiographyInline(admin.StackedInline):
-    """Inline admin for ``ShortBiography`` objects."""
-    model = models.ShortBiography
+#class ShortBiographyAdmin(TranslatableAdmin):
+#    """Admin for the ``Link`` model."""
+#    list_display = ['__str__', 'all_translations',]
+#
+#class ShortBiographyInline(admin.StackedInline):
+#    """Inline admin for ``ShortBiography`` objects."""
+#    model = models.ShortBiography
 
 
 class PersonAdmin(admin.ModelAdmin):
     """Admin for the ``Person`` model."""
     inlines = [LinkInline,
-            BiographyInline,
-            ShortBiographyInline
             ]
     #readonly_fields = ['user']
     list_display = [
@@ -117,7 +118,7 @@ admin.site.register(models.Nationality, NationalityAdmin)
 admin.site.register(models.Link, LinkAdmin)
 admin.site.register(models.LinkType, LinkTypeAdmin)
 admin.site.register(models.Biography, BiographyAdmin)
-admin.site.register(models.ShortBiography, ShortBiographyAdmin)
+#admin.site.register(models.ShortBiography, ShortBiographyAdmin)
 admin.site.register(models.Person, PersonAdmin)
 admin.site.unregister(User)
 admin.site.register(User, CustomUserAdmin)
