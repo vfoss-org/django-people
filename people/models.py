@@ -188,9 +188,9 @@ class Person(models.Model):
     """
     user = models.OneToOneField(
     #user = models.ForeignKey( # change also user receiver event.
-        settings.AUTH_USER_MODEL, null=True, #unique=True,
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, #unique=True,
         related_name="profile", # "person" by default
-        verbose_name=_("user")
+        verbose_name=_("user"),
     )
 
     roman_first_name = models.CharField(
@@ -239,6 +239,7 @@ class Person(models.Model):
 
     role = models.ForeignKey(
         Role,
+        on_delete=models.PROTECT,
         verbose_name=_('Role'),
         null=True, blank=True,
     )
